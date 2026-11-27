@@ -59,8 +59,15 @@ Cookie settings assume the production web frontend and API share a site
 (for example `app.example.com` and `api.example.com`) and use HTTPS.
 `WEB_ORIGIN` is the exact allowed frontend origin, without a trailing slash.
 
-This increment implements signup/login only. Refresh-token rotation endpoints,
-logout, protected-route token/session verification, email verification, and
+`GET /api/auth/me` is protected by `requireAuth`. Send the access token returned
+by login as `Authorization: Bearer YOUR_ACCESS_TOKEN`. Returns `{ "userId": "..." }`.
+Missing/invalid/expired tokens and ended sessions return 401. Middleware verifies
+the JWT signature, algorithm, issuer, audience, expiry, and UUID claims, then
+checks that its session belongs to the user, is unrevoked, and has not expired.
+Protected handlers can read `req.auth.userId` and `req.auth.sessionId`.
+
+Refresh-token rotation endpoints,
+logout, email verification, and
 password reset are not implemented yet. After the access token expires, login
 is needed again until refresh is implemented. These routes are currently for
 web clients; native token storage/transport will be added with mobile auth.
@@ -78,7 +85,8 @@ pnpm --filter backend test
 pnpm --filter backend build
 ```
 
-Validation tests run without a database. The integration test is skipped unless
+Validation and middleware tests run without a database; middleware tests mock
+session lookup. The integration test is skipped unless
 `AUTH_TEST_DATABASE_URL` is set to a separate PostgreSQL test database with the
 schema already migrated. It checks real signup/login, privacy defaults,
 duplicates, rejected credentials, password hashing, signed JWTs, cookies, and
